@@ -1,0 +1,227 @@
+docker network ls
+
+# создаем сеть
+docker network create -d bridge myNetTask01
+# создаем образ streamlit + viz
+docker build -t streamlit-app ./streamlit-tips-app
+# запускаем контейнер в сети
+docker run -d \
+  --name streamlit_tips_app \
+  --network myNetTask01 \
+  -p 8501:8501 \
+  streamlit-app
+
+# создаем образ telebot
+docker build -t telebot-app ./telegram_fio_translit_bot
+# запускаем контейнер в сети
+docker run -d \
+  --name telebot_fio_translit_app \
+  --network myNetTask01 \
+  telebot-app
+
+контейнер почему то не добавился в сеть
+ошибка в непередаче токена. файл с токеном в другой дирректории, нужен путь
+
+docker stop telebot_fio_translit_app
+docker rm telebot_fio_translit_app
+
+docker run -d \
+  --name telebot_fio_translit_app \
+  --env-file $(pwd)/telegram_fio_translit_bot/.env \
+  --network myNetTask01 \
+  telebot-app
+
+оба контейнера в сети
+
+docker network inspect myNetTask01
+[
+    {
+        "Name": "myNetTask01",
+        "Id": "d7465bca0edd35af5e09aeeb5179d8c55f3582552edf872ac7eb28f49b2f0b1f",
+        "Created": "2026-01-14T12:52:12.244398767+03:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv4": true,
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.19.0.0/16",
+                    "IPRange": "",
+                    "Gateway": "172.19.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Options": {},
+        "Labels": {},
+        "Containers": {
+            "0674296a0741d751b9afce58144ec8ac7f5905c55aa7eb520f90dcc17f839ea9": {
+                "Name": "telebot_fio_translit_app",
+                "EndpointID": "253bf7575641fed877dc67e93178fa0b93d0394e2bc7c24fd99ce962c2f45103",
+                "MacAddress": "9e:b7:ee:c2:c7:81",
+                "IPv4Address": "172.19.0.3/16",
+                "IPv6Address": ""
+            },
+            "e7d481c82f7b5184b7c93f443dcd69330cd54b4c1b835dee2426bfcf3d87a60a": {
+                "Name": "streamlit_tips_app",
+                "EndpointID": "06ae5f86b66e87f1a17af425df2fb9f662b575bb0b190794e2f44a2e5ba4784f",
+                "MacAddress": "c6:7a:9c:be:bf:0e",
+                "IPv4Address": "172.19.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Status": {
+            "IPAM": {
+                "Subnets": {
+                    "172.19.0.0/16": {
+                        "IPsInUse": 5,
+                        "DynamicIPsAvailable": 65531
+                    }
+                }
+            }
+        }
+    }
+]
+
+docker exec -it streamlit_tips_app sh
+$ docker exec -it streamlit_tips_app sh
+# ping telebot_fio_translit_app
+sh: 1: зшping: not found
+
+nslookup telebot_fio_translit_app
+# nslookup telebot_fio_translit_app
+sh: 2: nslookup: not found
+# 
+
+apt update && apt install -y iputils-ping
+# ping telebot_fio_translit_app
+PING telebot_fio_translit_app (172.19.0.3) 56(84) bytes of data.
+64 bytes from telebot_fio_translit_app.myNetTask01 (172.19.0.3): icmp_seq=1 ttl=64 time=0.109 ms
+64 bytes from telebot_fio_translit_app.myNetTask01 (172.19.0.3): icmp_seq=2 ttl=64 time=0.057 ms
+64 bytes from telebot_fio_translit_app.myNetTask01 (172.19.0.3): icmp_seq=3 ttl=64 time=0.056 ms
+64 bytes from telebot_fio_translit_app.myNetTask01 (172.19.0.3): icmp_seq=4 ttl=64 time=0.073 ms
+
+# ping streamlit_tips_app
+PING streamlit_tips_app (172.19.0.2) 56(84) bytes of data.
+64 bytes from streamlit_tips_app.myNetTask01 (172.19.0.2): icmp_seq=1 ttl=64 time=0.047 ms
+64 bytes from streamlit_tips_app.myNetTask01 (172.19.0.2): icmp_seq=2 ttl=64 time=0.053 ms
+64 bytes from streamlit_tips_app.myNetTask01 (172.19.0.2): icmp_seq=3 ttl=64 time=0.079 ms
+64 bytes from streamlit_tips_app.myNetTask01 (172.19.0.2): icmp_seq=4 ttl=64 time=0.046 ms
+64 bytes from streamlit_tips_app.myNetTask01 (172.19.0.2): icmp_seq=5 ttl=64 time=0.046 ms
+
+docker ps
+
+# Остановить конкретные контейнеры
+docker stop streamlit_tips_app telebot_fio_translit_app
+
+# ИЛИ остановить все
+docker stop $(docker ps -q)
+
+# Удалить конкретные
+docker rm streamlit_tips_app telebot_fio_translit_app
+
+# ИЛИ удалить все остановленные
+docker rm $(docker ps -a -q)
+
+
+Удалить сеть
+docker network rm myNetTask01
+
+
+docker images
+
+Удалить образы
+docker rmi streamlit-app telebot-app
+
+
+# Посмотри, есть ли .env в образе
+docker run --rm telegram_fio_translit_bot ls -la /app
+
+№проверить
+docker compose version
+
+# Собрать и запустить
+docker compose up --build -d
+
+# Посмотреть, работают ли контейнеры
+docker compose ps
+(base) andre@andre-IdeaPad-Gaming-3-15ARH05:~/Elbrus-DataScience/lessons/l13_14012026/HW/task-docker-network$ docker compose ps
+WARN[0000] /home/andre/Elbrus-DataScience/lessons/l13_14012026/HW/task-docker-network/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
+NAME                              IMAGE                           COMMAND                  SERVICE     CREATED          STATUS          PORTS
+task-docker-network-streamlit-1   task-docker-network-streamlit   "streamlit run main.…"   streamlit   15 seconds ago   Up 13 seconds   0.0.0.0:8501->8501/tcp, [::]:8501->8501/tcp
+task-docker-network-telebot-1     task-docker-network-telebot     "python fio_translit…"   telebot     15 seconds ago   Up 13 seconds   
+
+
+# Посмотреть логи бота (убедиться, что токен загружен)
+docker compose logs telebot
+
+# Посмотреть логи Streamlit
+docker compose logs streamlit
+
+Пересборка
+# 1. Остановить и удалить текущие контейнеры (и сеть)
+docker compose down
+
+# 2. Пересобрать образы и запустить заново в фоне
+docker compose up --build -d
+
+
+ => CACHED [streamlit 3/4] COPY . .                                                                                                                                                              0.0s
+ => CACHED [streamlit 4/4] RUN pip install --no-cache-dir -r requirements.txt                                                                                                                    0.0s
+ => [streamlit] exporting to image                                                                                                                                                               0.1s
+ => => exporting layers                                                                                                                                                                          0.0s
+ => => exporting manifest sha256:8d94c3c440b2938627554ceb30f47b3457315f4b9a07a154f688f7508a95eb25                                                                                                0.0s
+ => => exporting config sha256:3f80b29f23c62627831aa9c56915131a1d37ebcc68ed7489380b0a47e5f6f085                                                                                                  0.0s
+ => => exporting attestation manifest sha256:18dbe4a47452706fc042bb3b78a23cfb413e468a003a8a5d41a5aa2c994f2c85                                                                                    0.0s
+ => => exporting manifest list sha256:beb46d4bd47703cc7d78f0fcdc666f0dffcd7242af4f5960fcdd1a4cd41c0f48                                                                                           0.0s
+ => => naming to docker.io/library/task-docker-network-streamlit:latest                                                                                                                          0.0s
+ => => unpacking to docker.io/library/task-docker-network-streamlit:latest                                                                                                                       0.0s
+ => [streamlit] resolving provenance for metadata file                                                                                                                                           0.0s
+[+] up 5/5
+ ✔ Image task-docker-network-telebot         Built                                                                                                                                               2.8s 
+ ✔ Image task-docker-network-streamlit       Built                                                                                                                                               2.8s 
+ ✔ Network myNetTask01                       Created                                                                                                                                             0.0s 
+ ✔ Container task-docker-network-streamlit-1 Created                                                                                                                                             0.1s 
+ ✔ Container task-docker-network-telebot-1   Created                                                                                                                                             0.1s 
+(base) andre@andre-IdeaPad-Gaming-3-15ARH05:~/Elbrus-DataScience/lessons/l13_14012026/HW/task-docker-network$ docker compose logs streamlit
+WARN[0000] /home/andre/Elbrus-DataScience/lessons/l13_14012026/HW/task-docker-network/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
+streamlit-1  | 
+streamlit-1  | Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+streamlit-1  | 
+streamlit-1  | 
+streamlit-1  |   You can now view your Streamlit app in your browser.
+streamlit-1  | 
+streamlit-1  |   URL: http://0.0.0.0:8501
+streamlit-1  | 
+(base) andre@andre-IdeaPad-Gaming-3-15ARH05:~/Elbrus-DataScience/lessons/l13_14012026/HW/task-docker-network$ docker compose logs telebot
+WARN[0000] /home/andre/Elbrus-DataScience/lessons/l13_14012026/HW/task-docker-network/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
+telebot-1  | 2026-01-14 11:19:01,531 - aiogram.dispatcher - INFO - Start polling
+telebot-1  | 2026-01-14 11:19:01,761 - aiogram.dispatcher - INFO - Run polling for bot @tg_translit_fio_bot id=8516600496 - 'tranlit_fio_rus_lat'
+(base) andre@andre-IdeaPad-Gaming-3-15ARH05:~/Elbrus-DataScience/lessons/l13_14012026/HW/task-docker-network$ 
+
+
+# ping task-docker-network-telebot-1
+PING task-docker-network-telebot-1 (172.18.0.3) 56(84) bytes of data.
+64 bytes from task-docker-network-telebot-1.myNetTask01 (172.18.0.3): icmp_seq=1 ttl=64 time=0.062 ms
+64 bytes from task-docker-network-telebot-1.myNetTask01 (172.18.0.3): icmp_seq=2 ttl=64 time=0.043 ms
+64 bytes from task-docker-network-telebot-1.myNetTask01 (172.18.0.3): icmp_seq=3 ttl=64 time=0.044 ms
+64 bytes from task-docker-network-telebot-1.myNetTask01 (172.18.0.3): icmp_seq=4 ttl=64 time=0.051 ms
+64 bytes from task-docker-network-telebot-1.myNetTask01 (172.18.0.3): icmp_seq=5 ttl=64 time=0.045 ms
+64 bytes from task-docker-network-telebot-1.myNetTask01 (172.18.0.3): icmp_seq=6 ttl=64 time=0.074 ms
+exit
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 0
+# ping task-docker-network-streamlit-1
+PING task-docker-network-streamlit-1 (172.18.0.2) 56(84) bytes of data.
+64 bytes from 536f6be6aa4f (172.18.0.2): icmp_seq=1 ttl=64 time=0.033 ms
+64 bytes from 536f6be6aa4f (172.18.0.2): icmp_seq=2 ttl=64 time=0.059 ms
+64 bytes from 536f6be6aa4f (172.18.0.2): icmp_seq=3 ttl=64 time=0.056 ms
+^C
